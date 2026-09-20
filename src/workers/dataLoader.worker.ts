@@ -4,6 +4,13 @@ import { normalizeSpotifyRow, RawSpotifyRow } from '../data/normalizers/spotifyN
 import { normalizeHouseholdRow, RawHouseholdRow } from '../data/normalizers/householdNormalizer';
 import { normalizeTransactionsRow, RawMultiFacetRow } from '../data/normalizers/transactionsNormalizer';
 import { sanitizeEventForUI } from '../utils/privacy/privacyFilter';
+import { EventIndex } from '../utils/indexing/eventIndex';
+import {
+  generateStoryMoments,
+  computeArchiveHighlight,
+  StoryMoment,
+  ArchiveHighlight,
+} from '../utils/analysis/storyEngine';
 
 export interface WorkerProgressMessage {
   type: 'PROGRESS';
@@ -15,6 +22,8 @@ export interface WorkerProgressMessage {
 export interface WorkerSuccessMessage {
   type: 'SUCCESS';
   events: LifeTraceEvent[];
+  storyMoments: StoryMoment[];
+  archiveHighlight: ArchiveHighlight | null;
   stats: {
     spotifyCount: number;
     householdCount: number;
@@ -37,7 +46,7 @@ self.onmessage = async (e: MessageEvent<{ baseUrl?: string }>) => {
 
   try {
     // 1. Fetch & parse Spotify History
-    postMessage({ type: 'PROGRESS', phase: 'Loading Spotify History (150k streams)...', loaded: 0, total: 3 });
+    postMessage({ type: 'PROGRESS', phase: 'Loading Spotify History (150k streams)...', loaded: 0, total: 4 });
     const spotifyUrl = `${baseUrl}/datasets/spotify/spotify_history.csv`;
     const spotifyRes = await fetch(spotifyUrl);
     if (!spotifyRes.ok) throw new Error(`Failed to fetch ${spotifyUrl}: ${spotifyRes.statusText}`);
@@ -57,7 +66,7 @@ self.onmessage = async (e: MessageEvent<{ baseUrl?: string }>) => {
     }
 
     // 2. Fetch & parse Household Transactions
-    postMessage({ type: 'PROGRESS', phase: 'Loading Household Transactions...', loaded: 1, total: 3 });
+    postMessage({ type: 'PROGRESS', phase: 'Loading Household Transactions...', loaded: 1, total: 4 });
     const householdUrl = `${baseUrl}/datasets/household/Daily Household Transactions.csv`;
     const householdRes = await fetch(householdUrl);
     if (!householdRes.ok) throw new Error(`Failed to fetch ${householdUrl}: ${householdRes.statusText}`);
@@ -77,7 +86,7 @@ self.onmessage = async (e: MessageEvent<{ baseUrl?: string }>) => {
     }
 
     // 3. Fetch & parse Multi-Facet Transactions (JSON representation)
-    postMessage({ type: 'PROGRESS', phase: 'Loading Multi-Facet Transactions...', loaded: 2, total: 3 });
+    postMessage({ type: 'PROGRESS', phase: 'Loading Multi-Facet Transactions...', loaded: 2, total: 4 });
     const txUrl = `${baseUrl}/datasets/transactions/Augmented_IndiaTransactMultiFacet2024.json`;
     const txRes = await fetch(txUrl);
     if (!txRes.ok) throw new Error(`Failed to fetch ${txUrl}: ${txRes.statusText}`);
@@ -91,14 +100,21 @@ self.onmessage = async (e: MessageEvent<{ baseUrl?: string }>) => {
       }
     }
 
-    // Combine all events
+    // 4. Heavy Off-Main-Thread Processing: Indexing, Story Generation, and Archive Highlight in Web Worker
+    postMessage({ type: 'PROGRESS', phase: 'Computing O(log N) Temporal Indices & Story Moments...', loaded: 3, total: 4 });
     const allEvents = [...spotifyEvents, ...householdEvents, ...txEvents];
+    const workerIndex = new EventIndex(allEvents);
+    const archiveHighlight = computeArchiveHighlight(workerIndex);
+    const storyMoments = generateStoryMoments(workerIndex, archiveHighlight);
+
     const endTime = performance.now();
     const loadTimeMs = Math.round(endTime - startTime);
 
     postMessage({
       type: 'SUCCESS',
       events: allEvents,
+      storyMoments,
+      archiveHighlight,
       stats: {
         spotifyCount: spotifyEvents.length,
         householdCount: householdEvents.length,

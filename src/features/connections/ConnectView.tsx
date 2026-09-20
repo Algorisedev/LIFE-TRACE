@@ -5,7 +5,7 @@ import { EventIndex } from '../../utils/indexing/eventIndex';
 import { findConnectionsForEvent } from '../../utils/analysis/connectionEngine';
 import { ConnectionPathVisualizer } from './ConnectionPathVisualizer';
 import { ReceiptCard } from '../explore/ReceiptCard';
-import { Network, Search, Filter, ShieldCheck } from 'lucide-react';
+import { Network, Search, Filter, ShieldCheck, Info } from 'lucide-react';
 
 interface ConnectViewProps {
   index: EventIndex;
@@ -55,9 +55,11 @@ export const ConnectView: React.FC<ConnectViewProps> = ({
     }
     const q = searchQuery.toLowerCase().trim();
     return index.events
-      .filter(e =>
-        e.title.toLowerCase().includes(q) ||
-        e.subtitle.toLowerCase().includes(q)
+      .filter(
+        (e) =>
+          e.title.toLowerCase().includes(q) ||
+          e.subtitle.toLowerCase().includes(q) ||
+          (e.metadata.merchant && e.metadata.merchant.toLowerCase().includes(q))
       )
       .slice(0, 15);
   }, [index, searchQuery]);
@@ -65,7 +67,7 @@ export const ConnectView: React.FC<ConnectViewProps> = ({
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 font-mono">
       {/* Header Banner */}
-      <div className="space-y-2 border-b border-gray-800 pb-4">
+      <div className="space-y-3 border-b border-gray-800 pb-4">
         <div className="inline-flex items-center space-x-2 text-xs text-blue-400 font-bold uppercase tracking-widest">
           <Network className="w-4 h-4" />
           <span>TEMPORAL CORRELATION ENGINE</span>
@@ -74,6 +76,14 @@ export const ConnectView: React.FC<ConnectViewProps> = ({
         <p className="text-sm text-gray-400 max-w-2xl font-sans">
           Select any archived record to query nearby cross-source events occurring within the exact same temporal window.
         </p>
+
+        {/* Prominent Microcopy: Non-Causality Assurance */}
+        <div className="inline-flex items-center space-x-2 bg-blue-950/30 border border-blue-500/30 px-3.5 py-1.5 rounded-lg text-xs text-blue-300">
+          <Info className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+          <span className="font-semibold">
+            Connections represent temporal proximity between recorded events, not causation.
+          </span>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -92,7 +102,8 @@ export const ConnectView: React.FC<ConnectViewProps> = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search event to connect..."
-                className="w-full bg-[#07070a] border border-gray-800 text-xs text-gray-200 pl-9 pr-3 py-2 rounded-lg outline-none focus:border-blue-500"
+                aria-label="Search anchor event"
+                className="w-full bg-[#07070a] border border-gray-800 text-xs text-gray-200 pl-9 pr-3 py-2 rounded-lg outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-400"
               />
             </div>
 
@@ -124,9 +135,10 @@ export const ConnectView: React.FC<ConnectViewProps> = ({
               <div className="grid grid-cols-3 gap-2">
                 <button
                   onClick={() => setWindowType('30_min')}
-                  className={`py-2 px-3 rounded-lg border text-center font-bold transition-all ${
+                  aria-label="Select 30-minute time window"
+                  className={`py-2 px-3 rounded-lg border text-center font-bold transition-all focus-visible:ring-2 focus-visible:ring-blue-400 outline-none ${
                     windowType === '30_min'
-                      ? 'bg-blue-500/20 text-blue-400 border-blue-500/50'
+                      ? 'bg-blue-500/20 text-blue-400 border-blue-500/50 shadow-inner'
                       : 'bg-gray-900 text-gray-400 border-gray-800 hover:bg-gray-800'
                   }`}
                 >
@@ -134,9 +146,10 @@ export const ConnectView: React.FC<ConnectViewProps> = ({
                 </button>
                 <button
                   onClick={() => setWindowType('2_hours')}
-                  className={`py-2 px-3 rounded-lg border text-center font-bold transition-all ${
+                  aria-label="Select 2-hour time window"
+                  className={`py-2 px-3 rounded-lg border text-center font-bold transition-all focus-visible:ring-2 focus-visible:ring-blue-400 outline-none ${
                     windowType === '2_hours'
-                      ? 'bg-blue-500/20 text-blue-400 border-blue-500/50'
+                      ? 'bg-blue-500/20 text-blue-400 border-blue-500/50 shadow-inner'
                       : 'bg-gray-900 text-gray-400 border-gray-800 hover:bg-gray-800'
                   }`}
                 >
@@ -144,9 +157,10 @@ export const ConnectView: React.FC<ConnectViewProps> = ({
                 </button>
                 <button
                   onClick={() => setWindowType('same_day')}
-                  className={`py-2 px-3 rounded-lg border text-center font-bold transition-all ${
+                  aria-label="Select same-day time window"
+                  className={`py-2 px-3 rounded-lg border text-center font-bold transition-all focus-visible:ring-2 focus-visible:ring-blue-400 outline-none ${
                     windowType === 'same_day'
-                      ? 'bg-blue-500/20 text-blue-400 border-blue-500/50'
+                      ? 'bg-blue-500/20 text-blue-400 border-blue-500/50 shadow-inner'
                       : 'bg-gray-900 text-gray-400 border-gray-800 hover:bg-gray-800'
                   }`}
                 >
@@ -159,7 +173,10 @@ export const ConnectView: React.FC<ConnectViewProps> = ({
               <span className="text-gray-300">Cross-Source Only</span>
               <button
                 onClick={() => setCrossSourceOnly(!crossSourceOnly)}
-                className={`w-12 h-6 rounded-full transition-colors p-1 ${
+                role="switch"
+                aria-checked={crossSourceOnly}
+                aria-label="Toggle Cross-Source Only filter"
+                className={`w-12 h-6 rounded-full transition-colors p-1 focus-visible:ring-2 focus-visible:ring-blue-400 outline-none ${
                   crossSourceOnly ? 'bg-blue-600' : 'bg-gray-800'
                 }`}
               >
@@ -179,7 +196,7 @@ export const ConnectView: React.FC<ConnectViewProps> = ({
             <h3 className="text-lg font-bold text-white font-sans">
               Matched Temporal Connections ({connections.length})
             </h3>
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-gray-400 truncate max-w-xs">
               Anchor: <strong className="text-white">{activeAnchor.title}</strong>
             </span>
           </div>
@@ -187,7 +204,7 @@ export const ConnectView: React.FC<ConnectViewProps> = ({
           {connections.length === 0 ? (
             <div className="bg-[#0c0d15] border border-dashed border-gray-800 rounded-xl p-8 text-center space-y-3 font-mono">
               <p className="text-gray-400 text-sm">
-                No events found within the <strong className="text-white">±{windowType}</strong> window for this anchor record.
+                No events found within the <strong className="text-white">±{windowType.replace('_', ' ')}</strong> window for this anchor record.
               </p>
               <p className="text-xs text-gray-500">
                 Try switching the window size to "±2 Hours" or "Same Day" to expand the search scope.
@@ -195,8 +212,12 @@ export const ConnectView: React.FC<ConnectViewProps> = ({
             </div>
           ) : (
             <div className="space-y-6">
-              {connections.map((conn) => (
-                <ConnectionPathVisualizer key={conn.id} connection={conn} />
+              {connections.map((conn, idx) => (
+                <ConnectionPathVisualizer
+                  key={conn.id}
+                  connection={conn}
+                  connectionIndex={idx}
+                />
               ))}
             </div>
           )}

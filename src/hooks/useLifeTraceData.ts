@@ -4,6 +4,7 @@ import { LifeTraceInsightsSummary } from '../data/types/insight';
 import { DatasetLoadStats, loadAllDatasetsDirectly } from '../data/loaders/datasetLoader';
 import { EventIndex } from '../utils/indexing/eventIndex';
 import { computeInsightsSummary } from '../utils/analysis/insightEngine';
+import { StoryMoment, ArchiveHighlight } from '../utils/analysis/storyEngine';
 import DataLoaderWorker from '../workers/dataLoader.worker?worker';
 
 export interface UseLifeTraceDataResult {
@@ -14,6 +15,8 @@ export interface UseLifeTraceDataResult {
   index: EventIndex | null;
   insights: LifeTraceInsightsSummary | null;
   stats: DatasetLoadStats | null;
+  storyMoments: StoryMoment[];
+  archiveHighlight: ArchiveHighlight | null;
 }
 
 export function useLifeTraceData(): UseLifeTraceDataResult {
@@ -22,6 +25,8 @@ export function useLifeTraceData(): UseLifeTraceDataResult {
   const [error, setError] = useState<string | null>(null);
   const [events, setEvents] = useState<LifeTraceEvent[]>([]);
   const [stats, setStats] = useState<DatasetLoadStats | null>(null);
+  const [storyMoments, setStoryMoments] = useState<StoryMoment[]>([]);
+  const [archiveHighlight, setArchiveHighlight] = useState<ArchiveHighlight | null>(null);
 
   useEffect(() => {
     let activeWorker: Worker | null = null;
@@ -35,6 +40,8 @@ export function useLifeTraceData(): UseLifeTraceDataResult {
         if (!isCancelled) {
           setEvents(result.events);
           setStats(result.stats);
+          setStoryMoments(result.storyMoments);
+          setArchiveHighlight(result.archiveHighlight);
           setLoading(false);
           setProgress('Complete');
         }
@@ -60,6 +67,8 @@ export function useLifeTraceData(): UseLifeTraceDataResult {
             } else if (msg.type === 'SUCCESS') {
               setEvents(msg.events);
               setStats(msg.stats);
+              setStoryMoments(msg.storyMoments || []);
+              setArchiveHighlight(msg.archiveHighlight || null);
               setLoading(false);
               setProgress('Complete');
             } else if (msg.type === 'ERROR') {
@@ -114,5 +123,7 @@ export function useLifeTraceData(): UseLifeTraceDataResult {
     index,
     insights,
     stats,
+    storyMoments,
+    archiveHighlight,
   };
 }

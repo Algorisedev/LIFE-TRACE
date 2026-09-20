@@ -4,6 +4,13 @@ import { normalizeSpotifyRow, RawSpotifyRow } from '../normalizers/spotifyNormal
 import { normalizeHouseholdRow, RawHouseholdRow } from '../normalizers/householdNormalizer';
 import { normalizeTransactionsRow, RawMultiFacetRow } from '../normalizers/transactionsNormalizer';
 import { sanitizeEventForUI } from '../../utils/privacy/privacyFilter';
+import { EventIndex } from '../../utils/indexing/eventIndex';
+import {
+  generateStoryMoments,
+  computeArchiveHighlight,
+  StoryMoment,
+  ArchiveHighlight,
+} from '../../utils/analysis/storyEngine';
 
 export interface DatasetLoadStats {
   spotifyCount: number;
@@ -13,12 +20,19 @@ export interface DatasetLoadStats {
   loadTimeMs: number;
 }
 
+export interface DatasetLoadResult {
+  events: LifeTraceEvent[];
+  stats: DatasetLoadStats;
+  storyMoments: StoryMoment[];
+  archiveHighlight: ArchiveHighlight | null;
+}
+
 /**
  * Fallback main-thread loader when Web Worker is not available.
  */
 export async function loadAllDatasetsDirectly(
   onProgress?: (phase: string) => void
-): Promise<{ events: LifeTraceEvent[]; stats: DatasetLoadStats }> {
+): Promise<DatasetLoadResult> {
   const startTime = performance.now();
 
   // 1. Spotify
@@ -54,10 +68,16 @@ export async function loadAllDatasetsDirectly(
   }
 
   const allEvents = [...spotifyEvents, ...householdEvents, ...txEvents];
+  const fallbackIndex = new EventIndex(allEvents);
+  const archiveHighlight = computeArchiveHighlight(fallbackIndex);
+  const storyMoments = generateStoryMoments(fallbackIndex, archiveHighlight);
+
   const endTime = performance.now();
 
   return {
     events: allEvents,
+    storyMoments,
+    archiveHighlight,
     stats: {
       spotifyCount: spotifyEvents.length,
       householdCount: householdEvents.length,

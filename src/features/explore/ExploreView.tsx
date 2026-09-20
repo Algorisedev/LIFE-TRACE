@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { LifeTraceEvent } from '../../data/types/event';
 import { EventIndex } from '../../utils/indexing/eventIndex';
 import { ExploreFilters, FilterState } from './ExploreFilters';
@@ -9,15 +9,17 @@ interface ExploreViewProps {
   index: EventIndex;
   onConnectMoment: (event: LifeTraceEvent) => void;
   initialMonthRange?: string;
+  initialSearchQuery?: string;
 }
 
 export const ExploreView: React.FC<ExploreViewProps> = ({
   index,
   onConnectMoment,
   initialMonthRange = 'all',
+  initialSearchQuery = '',
 }) => {
   const [filters, setFilters] = useState<FilterState>({
-    searchQuery: '',
+    searchQuery: initialSearchQuery,
     source: 'all',
     category: 'all',
     monthRange: initialMonthRange,
@@ -25,6 +27,15 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
   });
 
   const [selectedEvent, setSelectedEvent] = useState<LifeTraceEvent | null>(null);
+
+  // Sync state if props change
+  useEffect(() => {
+    setFilters((prev) => ({
+      ...prev,
+      monthRange: initialMonthRange,
+      searchQuery: initialSearchQuery || prev.searchQuery,
+    }));
+  }, [initialMonthRange, initialSearchQuery]);
 
   const availableMonths = useMemo(() => index.getAvailableMonths(), [index]);
 
@@ -59,7 +70,8 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
         e.subtitle.toLowerCase().includes(q) ||
         (e.metadata.note && e.metadata.note.toLowerCase().includes(q)) ||
         (e.metadata.merchant && e.metadata.merchant.toLowerCase().includes(q)) ||
-        (e.metadata.city && e.metadata.city.toLowerCase().includes(q))
+        (e.metadata.city && e.metadata.city.toLowerCase().includes(q)) ||
+        e.dateKey.includes(q)
       );
     }
 

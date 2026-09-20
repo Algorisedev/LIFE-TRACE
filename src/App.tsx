@@ -10,10 +10,20 @@ import { VisualizationView } from './features/visualization/VisualizationView';
 import { LifeTraceEvent } from './data/types/event';
 
 export function App() {
-  const { loading, progress, error, stats, index, insights } = useLifeTraceData();
+  const {
+    loading,
+    progress,
+    error,
+    stats,
+    index,
+    insights,
+    storyMoments,
+    archiveHighlight,
+  } = useLifeTraceData();
   const [activeTab, setActiveTab] = useState<TabType>('story');
   const [selectedAnchorEvent, setSelectedAnchorEvent] = useState<LifeTraceEvent | null>(null);
   const [exploreMonthRange, setExploreMonthRange] = useState<string>('all');
+  const [exploreSearchQuery, setExploreSearchQuery] = useState<string>('');
 
   const handleConnectMoment = (event: LifeTraceEvent) => {
     setSelectedAnchorEvent(event);
@@ -22,6 +32,13 @@ export function App() {
 
   const handleFilterMonth = (monthKey: string) => {
     setExploreMonthRange(monthKey);
+    setExploreSearchQuery('');
+    setActiveTab('explore');
+  };
+
+  const handleExploreMoment = (monthKey: string, dateKey?: string) => {
+    setExploreMonthRange(monthKey);
+    setExploreSearchQuery(dateKey || '');
     setActiveTab('explore');
   };
 
@@ -56,8 +73,12 @@ export function App() {
           <StoryView
             stats={stats}
             insights={insights}
+            storyMoments={storyMoments}
+            archiveHighlight={archiveHighlight}
             onNavigateTab={setActiveTab}
-            onFilterRange={(startM, _endM) => handleFilterMonth(startM)}
+            onFilterRange={(startM) => handleFilterMonth(startM)}
+            onConnectMoment={handleConnectMoment}
+            onExploreMoment={handleExploreMoment}
           />
         )}
 
@@ -66,6 +87,7 @@ export function App() {
             index={index}
             onConnectMoment={handleConnectMoment}
             initialMonthRange={exploreMonthRange}
+            initialSearchQuery={exploreSearchQuery}
           />
         )}
 
